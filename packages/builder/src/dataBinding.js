@@ -846,6 +846,9 @@ export const getActionBindings = (actions, actionId) => {
       x => x.name === action["##eventHandlerType"]
     )
     if (def.context) {
+      const actionLabel =
+        action.parameters?.actionName ||
+        `Action ${idx + 1} - ${action["##eventHandlerType"]}`
       def.context.forEach(contextValue => {
         bindings.push({
           readableBinding: `Action ${idx + 1}.${contextValue.label}`,
@@ -853,7 +856,7 @@ export const getActionBindings = (actions, actionId) => {
           category: "Actions",
           icon: "path",
           display: {
-            name: contextValue.label,
+            name: `${actionLabel}: ${contextValue.label}`,
           },
         })
       })

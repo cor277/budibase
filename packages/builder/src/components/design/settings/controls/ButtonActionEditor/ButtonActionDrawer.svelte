@@ -9,6 +9,8 @@
     DrawerContent,
     ActionButton,
     Search,
+    Input,
+    Label,
   } from "@budibase/bbui"
   import { getAvailableActions } from "./index"
   import { generate } from "shortid"
@@ -236,22 +238,26 @@
           allBindings.push(stateBinding)
         }
       })
-    // Get which indexes are asynchronous automations as we want to filter them out from the bindings
-    const asynchronousAutomationIndexes = actions
+    // Get the runtime binding prefixes for asynchronous automations
+    // so we can filter out their context bindings (they have no result)
+    const asyncAutomationBindingPrefixes = actions
       .map((action, index) => {
         if (
           action[EVENT_TYPE_KEY] === "Trigger Automation" &&
           !action.parameters?.synchronous
         ) {
-          return index
+          return `actions.${index}.`
         }
+        return null
       })
-      .filter(index => index !== undefined)
+      .filter(Boolean)
 
-    // Based on the above, filter out the asynchronous automations from the bindings
-    let contextBindings = asynchronousAutomationIndexes
-      ? eventContextBindings.filter((binding, index) => {
-          return !asynchronousAutomationIndexes.includes(index)
+    // Filter out bindings that belong to asynchronous automations
+    let contextBindings = asyncAutomationBindingPrefixes.length
+      ? eventContextBindings.filter(binding => {
+          return !asyncAutomationBindingPrefixes.some(prefix =>
+            binding.runtimeBinding?.startsWith(prefix)
+          )
         })
       : eventContextBindings
 
@@ -335,7 +341,7 @@
               hovercolor="var(--spectrum-global-color-gray-800)"
             />
             <div class="action-header">
-              {index + 1}.&nbsp;{toDisplay(action[EVENT_TYPE_KEY])}
+              {index + 1}.&nbsp;{action.parameters?.actionName || toDisplay(action[EVENT_TYPE_KEY])}
             </div>
             <Icon
               name="x"
@@ -350,6 +356,14 @@
   </Layout>
   <Layout noPadding>
     {#if selectedActionComponent && !showAvailableActions}
+      <div class="action-name-field">
+        <Label size="S">Action Name</Label>
+        <Input
+          thin
+          placeholder={toDisplay(selectedAction[EVENT_TYPE_KEY])}
+          bind:value={selectedAction.parameters.actionName}
+        />
+      </div>
       {#key (selectedAction.id, originalActionIndex)}
         <div class="selected-action-container">
           <svelte:component
@@ -365,6 +379,13 @@
 </DrawerContent>
 
 <style>
+  .action-name-field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-s);
+    padding-bottom: var(--spacing-l);
+    border-bottom: 1px solid var(--spectrum-global-color-gray-300);
+  }
   .actions {
     display: flex;
     flex-direction: column;
